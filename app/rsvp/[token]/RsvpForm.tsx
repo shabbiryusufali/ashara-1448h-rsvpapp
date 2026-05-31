@@ -251,22 +251,16 @@ export default function RsvpForm({
         <div className="pb-8">
           <Button
             onClick={handleSubmit}
-            disabled={submitting || submitted}
+            disabled={submitting}
             className="w-full h-14 text-base font-semibold"
             size="lg"
           >
             {submitting
-              ? "Submitting..."
+              ? "Saving..."
               : submitted
-              ? "RSVP Submitted ✓"
+              ? "Save Changes"
               : "Submit RSVP"}
           </Button>
-          {submitted && (
-            <p className="text-center text-sm text-gray-500 mt-2">
-              Your RSVP is submitted. You can still edit your meal selections
-              above.
-            </p>
-          )}
         </div>
       </div>
     </main>
