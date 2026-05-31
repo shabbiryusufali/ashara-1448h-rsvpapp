@@ -16,6 +16,7 @@ import {
 export default function HomePage() {
   const router = useRouter();
   const [itsId, setItsId] = useState("");
+  const [headName, setHeadName] = useState("");
   const [lastName, setLastName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -29,7 +30,11 @@ export default function HomePage() {
       const res = await fetch("/api/auth/lookup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ itsId: itsId.trim(), lastName: lastName.trim() }),
+        body: JSON.stringify({
+          itsId: itsId.trim(),
+          headName: headName.trim(),
+          lastName: lastName.trim(),
+        }),
       });
 
       const data = await res.json();
@@ -55,23 +60,22 @@ export default function HomePage() {
             Ashara 1448H RSVP
           </h1>
           <p className="text-gray-600">
-            Please enter your ITS ID and last name to access your family&apos;s
-            RSVP form.
+            Enter your details to register or access your RSVP.
           </p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Family Lookup</CardTitle>
+            <CardTitle>Family Details</CardTitle>
             <CardDescription>
-              Enter the Head of Family&apos;s ITS ID and your family&apos;s
-              last name to continue.
+              First time? We&apos;ll create your record. Returning?
+              We&apos;ll pull up your existing RSVP.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="itsId">ITS ID (Head of Family)</Label>
+                <Label htmlFor="itsId">ITS ID</Label>
                 <Input
                   id="itsId"
                   type="number"
@@ -85,11 +89,24 @@ export default function HomePage() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="headName">Head of Family Name</Label>
+                <Input
+                  id="headName"
+                  type="text"
+                  placeholder="e.g. Ahmed"
+                  value={headName}
+                  onChange={(e) => setHeadName(e.target.value)}
+                  required
+                  className="h-12 text-base"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="lastName">Last Name</Label>
                 <Input
                   id="lastName"
                   type="text"
-                  placeholder="e.g. Ali"
+                  placeholder="e.g. Yusufali"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   required
@@ -108,7 +125,7 @@ export default function HomePage() {
                 className="w-full h-12 text-base"
                 disabled={loading}
               >
-                {loading ? "Looking up..." : "Continue →"}
+                {loading ? "Please wait..." : "Continue →"}
               </Button>
             </form>
           </CardContent>
