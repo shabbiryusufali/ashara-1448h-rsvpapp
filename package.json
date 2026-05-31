@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --no-turbopack",
+    "dev": "next dev",
     "build": "next build && tsx prisma/seed.ts",
     "start": "next start",
     "lint": "eslint",
@@ -12,6 +12,7 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
+    "db:reset": "prisma migrate reset --force",
     "import-families": "tsx scripts/import-families.ts"
   },
   "prisma": {
