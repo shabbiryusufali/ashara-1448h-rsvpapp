@@ -23,13 +23,10 @@ export async function POST(request: NextRequest) {
     });
 
     if (existing) {
-      if (existing.lastName.toLowerCase() !== lastNameStr.toLowerCase()) {
-        return NextResponse.json(
-          { error: "Last name does not match our records." },
-          { status: 401 }
-        );
-      }
-      return NextResponse.json({ editToken: existing.editToken });
+      return NextResponse.json(
+        { error: "This ITS ID is already registered. Please sign in to view or edit your RSVP.", alreadyRegistered: true },
+        { status: 409 }
+      );
     }
 
     const meals = await prisma.meal.findMany();

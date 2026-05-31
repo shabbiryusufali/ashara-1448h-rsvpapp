@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,10 +46,12 @@ export default function HomePage() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [alreadyRegistered, setAlreadyRegistered] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setAlreadyRegistered(false);
     setLoading(true);
 
     const phone = phoneNumber.trim()
@@ -72,6 +75,9 @@ export default function HomePage() {
       const data = await res.json();
 
       if (!res.ok) {
+        if (data.alreadyRegistered) {
+          setAlreadyRegistered(true);
+        }
         setError(data.error || "Something went wrong. Please try again.");
         return;
       }
@@ -92,7 +98,11 @@ export default function HomePage() {
             Ashara 1448H RSVP
           </h1>
           <p className="text-gray-600">
-            Enter your details to register or access your RSVP.
+            New here? Register your family below. Already registered?{" "}
+            <Link href="/signin" className="text-emerald-600 hover:underline font-medium">
+              Sign in to edit your RSVP
+            </Link>
+            .
           </p>
         </div>
 
@@ -100,8 +110,11 @@ export default function HomePage() {
           <CardHeader>
             <CardTitle>Family Details</CardTitle>
             <CardDescription>
-              First time? We&apos;ll create your record. Returning?
-              We&apos;ll pull up your existing RSVP.
+              Fill in your details to create a new RSVP. Already registered?{" "}
+              <Link href="/signin" className="text-emerald-600 hover:underline font-medium">
+                Sign in here
+              </Link>
+              .
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -205,6 +218,15 @@ export default function HomePage() {
               {error && (
                 <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
                   {error}
+                  {alreadyRegistered && (
+                    <span>
+                      {" "}
+                      <Link href="/signin" className="underline font-medium">
+                        Sign in here
+                      </Link>
+                      .
+                    </span>
+                  )}
                 </div>
               )}
 
