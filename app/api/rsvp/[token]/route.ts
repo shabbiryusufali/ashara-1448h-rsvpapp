@@ -58,10 +58,10 @@ export async function PATCH(
   try {
     const { token } = await params;
     const body = await request.json();
-    const { mealId, attending } = body;
+    const { mealId, count } = body;
 
-    if (!mealId || attending === undefined) {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+    if (!mealId || count === undefined || count < 0 || !Number.isInteger(count)) {
+      return NextResponse.json({ error: "Missing or invalid fields" }, { status: 400 });
     }
 
     const family = await prisma.family.findUnique({
@@ -72,10 +72,12 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid token" }, { status: 404 });
     }
 
+    const safeCount = Math.min(count, family.memberCount);
+
     const updated = await prisma.mealResponse.upsert({
       where: { familyId_mealId: { familyId: family.id, mealId } },
-      update: { attending },
-      create: { familyId: family.id, mealId, attending },
+      update: { attending: safeCount },
+      create: { familyId: family.id, mealId, attending: safeCount },
     });
 
     // Touch RSVP updatedAt (upsert so it works even if not yet submitted)

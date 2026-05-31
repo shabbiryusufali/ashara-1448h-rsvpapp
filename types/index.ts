@@ -24,7 +24,7 @@ export interface MealResponse {
   id: string;
   familyId: string;
   mealId: string;
-  attending: boolean;
+  attending: number;
 }
 
 export interface Rsvp {

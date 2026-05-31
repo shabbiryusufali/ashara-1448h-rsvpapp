@@ -41,7 +41,7 @@ model MealResponse {
   family    Family  @relation(fields: [familyId], references: [id])
   mealId    String
   meal      Meal    @relation(fields: [mealId], references: [id])
-  attending Boolean @default(false)
+  attending Int @default(0)
 
   @@unique([familyId, mealId])
 }

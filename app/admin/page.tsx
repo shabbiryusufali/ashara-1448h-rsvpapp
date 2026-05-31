@@ -29,7 +29,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
   const meals = await prisma.meal.findMany({
     orderBy: [{ day: "asc" }, { mealType: "asc" }],
     include: {
-      responses: { where: { attending: true } },
+      responses: { where: { attending: { gt: 0 } } },
     },
   });
 
@@ -91,7 +91,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       <TableCell>
                         {lunch ? (
                           <Badge variant="secondary">
-                            {lunch.responses.length}
+                            {lunch.responses.reduce((s, r) => s + (r.attending as unknown as number), 0)}
                           </Badge>
                         ) : (
                           "—"
@@ -100,7 +100,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                       <TableCell>
                         {dinner ? (
                           <Badge variant="secondary">
-                            {dinner.responses.length}
+                            {dinner.responses.reduce((s, r) => s + r.attending, 0)}
                           </Badge>
                         ) : (
                           "—"

@@ -31,18 +31,35 @@ export async function GET(request: NextRequest) {
       orderBy: [{ day: "asc" }, { mealType: "asc" }],
     });
 
-    const mealHeaders = meals.map((m) => `Day ${m.day} ${m.mealType}`).join(",");
+    const mealHeaders = meals
+      .map((m) => {
+        if (m.day === 10 && m.mealType === "dinner") return "Day 10 Ashura Dinner";
+        return `Day ${m.day} ${m.mealType}`;
+      })
+      .join(",");
+
+    // Compute totals per meal across all families
+    const mealTotals = new Map<string, number>(meals.map((m) => [m.id, 0]));
+    for (const family of families) {
+      for (const r of family.responses) {
+        mealTotals.set(r.mealId, (mealTotals.get(r.mealId) ?? 0) + (r.attending as unknown as number));
+      }
+    }
+
+    const totalMealValues = meals.map((m) => mealTotals.get(m.id) ?? 0).join(",");
 
     const rows: string[] = [
-      `Family ITS ID,Head Name,Last Name,Members,Email,Phone,${mealHeaders},RSVP Submitted`,
+      `ITS ID,Head Name,Last Name,Members,Email,Phone,${mealHeaders},RSVP Submitted`,
+      // Totals row — ID -1, name "Total"
+      `-1,Total,,,,,${totalMealValues},`,
     ];
 
     for (const family of families) {
-      const responseMap = new Map(
-        family.responses.map((r) => [r.mealId, r.attending])
+      const responseMap = new Map<string, number>(
+        family.responses.map((r) => [r.mealId, r.attending as unknown as number])
       );
       const mealValues = meals
-        .map((m) => (responseMap.get(m.id) ? "Yes" : "No"))
+        .map((m) => responseMap.get(m.id) ?? 0)
         .join(",");
 
       rows.push(

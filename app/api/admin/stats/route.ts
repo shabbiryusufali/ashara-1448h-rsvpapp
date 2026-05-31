@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       orderBy: [{ day: "asc" }, { mealType: "asc" }],
       include: {
         responses: {
-          where: { attending: true },
+          where: { attending: { gt: 0 } },
         },
       },
     });
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       mealId: meal.id,
       day: meal.day,
       mealType: meal.mealType,
-      count: meal.responses.length,
+      count: meal.responses.reduce((s, r) => s + (r.attending as unknown as number), 0),
     }));
 
     // Total families that have RSVPed
