@@ -210,7 +210,7 @@ export default function RsvpForm({
                     </span>
                     {day === 10 && (
                       <Badge variant="outline" className="text-xs text-amber-700 border-amber-300">
-                        Fasting day — Dinner only
+                        Dinner only
                       </Badge>
                     )}
                     {total > 0 && (
@@ -282,6 +282,32 @@ interface MealCountRowProps {
 }
 
 function MealCountRow({ meal, label, count, max, onChange }: MealCountRowProps) {
+  const [inputValue, setInputValue] = useState(String(count));
+
+  // Keep input in sync when count changes externally (e.g. +/- buttons)
+  const prevCount = useRef(count);
+  if (prevCount.current !== count) {
+    prevCount.current = count;
+    setInputValue(String(count));
+  }
+
+  function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setInputValue(e.target.value);
+  }
+
+  function handleInputBlur() {
+    const parsed = parseInt(inputValue, 10);
+    const clamped = isNaN(parsed) ? 0 : Math.min(max, Math.max(0, parsed));
+    setInputValue(String(clamped));
+    onChange(meal.id, clamped);
+  }
+
+  function handleInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter") {
+      (e.target as HTMLInputElement).blur();
+    }
+  }
+
   return (
     <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
       <div>
@@ -298,9 +324,18 @@ function MealCountRow({ meal, label, count, max, onChange }: MealCountRowProps) 
         >
           −
         </button>
-        <span className="w-8 text-center text-sm font-semibold tabular-nums">
-          {count}
-        </span>
+        <input
+          type="number"
+          inputMode="numeric"
+          value={inputValue}
+          onChange={handleInputChange}
+          onBlur={handleInputBlur}
+          onKeyDown={handleInputKeyDown}
+          className="w-12 text-center text-sm font-semibold tabular-nums border border-gray-300 rounded-md py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          min={0}
+          max={max}
+          aria-label={`${label} count`}
+        />
         <button
           type="button"
           onClick={() => onChange(meal.id, Math.min(max, count + 1))}
