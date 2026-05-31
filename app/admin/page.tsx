@@ -44,7 +44,6 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
         }
       : undefined,
     include: {
-      members: true,
       rsvp: true,
     },
     orderBy: { lastName: "asc" },
@@ -57,10 +56,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-          <a
-            href={`/api/admin/export?secret=${secret}`}
-            download
-          >
+          <a href={`/api/admin/export?secret=${secret}`} download>
             <Button variant="outline" size="sm">
               Export CSV
             </Button>
@@ -77,14 +73,14 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
               <TableHeader>
                 <TableRow>
                   <TableHead>Day</TableHead>
-                  <TableHead>Breakfast</TableHead>
+                  <TableHead>Lunch</TableHead>
                   <TableHead>Dinner</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {days.map((day) => {
-                  const breakfast = meals.find(
-                    (m) => m.day === day && m.mealType === "breakfast"
+                  const lunch = meals.find(
+                    (m) => m.day === day && m.mealType === "lunch"
                   );
                   const dinner = meals.find(
                     (m) => m.day === day && m.mealType === "dinner"
@@ -93,9 +89,9 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     <TableRow key={day}>
                       <TableCell className="font-medium">Day {day}</TableCell>
                       <TableCell>
-                        {breakfast ? (
+                        {lunch ? (
                           <Badge variant="secondary">
-                            {breakfast.responses.length}
+                            {lunch.responses.length}
                           </Badge>
                         ) : (
                           "—"
@@ -164,7 +160,7 @@ export default async function AdminPage({ searchParams }: AdminPageProps) {
                     <TableCell>
                       {family.headName} {family.lastName}
                     </TableCell>
-                    <TableCell>{family.members.length}</TableCell>
+                    <TableCell>{family.memberCount}</TableCell>
                     <TableCell>
                       {family.rsvp ? (
                         <Badge variant="success">Submitted</Badge>

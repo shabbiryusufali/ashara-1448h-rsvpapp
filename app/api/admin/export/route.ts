@@ -19,12 +19,8 @@ export async function GET(request: NextRequest) {
   try {
     const families = await prisma.family.findMany({
       include: {
-        members: {
-          include: {
-            responses: {
-              include: { meal: true },
-            },
-          },
+        responses: {
+          include: { meal: true },
         },
         rsvp: true,
       },
@@ -35,35 +31,32 @@ export async function GET(request: NextRequest) {
       orderBy: [{ day: "asc" }, { mealType: "asc" }],
     });
 
-    const mealHeaders = meals
-      .map((m) => `Day ${m.day} ${m.mealType}`)
-      .join(",");
+    const mealHeaders = meals.map((m) => `Day ${m.day} ${m.mealType}`).join(",");
 
     const rows: string[] = [
-      `Family ITS ID,Head Name,Last Name,Member Name,Age Group,${mealHeaders},RSVP Submitted`,
+      `Family ITS ID,Head Name,Last Name,Members,Email,Phone,${mealHeaders},RSVP Submitted`,
     ];
 
     for (const family of families) {
-      for (const member of family.members) {
-        const responseMap = new Map(
-          member.responses.map((r) => [r.mealId, r.attending])
-        );
-        const mealValues = meals
-          .map((m) => (responseMap.get(m.id) ? "Yes" : "No"))
-          .join(",");
+      const responseMap = new Map(
+        family.responses.map((r) => [r.mealId, r.attending])
+      );
+      const mealValues = meals
+        .map((m) => (responseMap.get(m.id) ? "Yes" : "No"))
+        .join(",");
 
-        rows.push(
-          [
-            family.itsId,
-            `"${family.headName}"`,
-            `"${family.lastName}"`,
-            `"${member.name}"`,
-            member.ageGroup,
-            mealValues,
-            family.rsvp ? family.rsvp.updatedAt.toISOString() : "Not submitted",
-          ].join(",")
-        );
-      }
+      rows.push(
+        [
+          family.itsId,
+          `"${family.headName}"`,
+          `"${family.lastName}"`,
+          family.memberCount,
+          family.email ? `"${family.email}"` : "",
+          family.phone ? `"${family.phone}"` : "",
+          mealValues,
+          family.rsvp ? family.rsvp.updatedAt.toISOString() : "Not submitted",
+        ].join(",")
+      );
     }
 
     const csv = rows.join("\n");

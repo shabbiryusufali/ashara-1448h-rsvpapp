@@ -1,22 +1,18 @@
-export interface FamilyWithMembers {
+export interface Family {
   id: string;
   itsId: string;
   headName: string;
   lastName: string;
   phone: string | null;
   email: string | null;
+  memberCount: number;
   editToken: string;
   createdAt: Date;
-  members: Member[];
   rsvp?: Rsvp | null;
 }
 
-export interface Member {
-  id: string;
-  familyId: string;
-  name: string;
-  ageGroup: string;
-}
+// Kept for backwards compat with any remaining references
+export type FamilyWithMembers = Family;
 
 export interface Meal {
   id: string;
@@ -26,7 +22,7 @@ export interface Meal {
 
 export interface MealResponse {
   id: string;
-  memberId: string;
+  familyId: string;
   mealId: string;
   attending: boolean;
 }
@@ -39,7 +35,7 @@ export interface Rsvp {
 }
 
 export interface RsvpPageData {
-  family: FamilyWithMembers;
+  family: Family;
   meals: Meal[];
   responses: MealResponse[];
 }
