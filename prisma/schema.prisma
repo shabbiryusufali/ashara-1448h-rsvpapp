@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Family {
+  id        String   @id @default(cuid())
+  itsId     String   @unique
+  headName  String
+  lastName  String
+  phone     String?
+  email     String?
+  editToken String   @unique @default(cuid())
+  createdAt DateTime @default(now())
+  members   Member[]
+  rsvp      Rsvp?
+}
+
+model Member {
+  id        String         @id @default(cuid())
+  familyId  String
+  family    Family         @relation(fields: [familyId], references: [id])
+  name      String
+  ageGroup  String // "adult" | "child"
+  responses MealResponse[]
+}
+
+model Meal {
+  id        String         @id @default(cuid())
+  day       Int // 1-10
+  mealType  String // "breakfast" | "dinner"
+  responses MealResponse[]
+}
+
+model Rsvp {
+  id          String   @id @default(cuid())
+  familyId    String   @unique
+  family      Family   @relation(fields: [familyId], references: [id])
+  submittedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model MealResponse {
+  id        String  @id @default(cuid())
+  memberId  String
+  member    Member  @relation(fields: [memberId], references: [id])
+  mealId    String
+  meal      Meal    @relation(fields: [mealId], references: [id])
+  attending Boolean @default(false)
+
+  @@unique([memberId, mealId])
+}
