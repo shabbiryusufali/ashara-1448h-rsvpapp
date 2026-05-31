@@ -51,10 +51,10 @@ export default async function AdminFamilyPage({ params, searchParams }: PageProp
   });
 
   const days = Array.from({ length: 10 }, (_, i) => i + 1);
-  const responseMap = new Map(
-    family.responses.map((r) => [r.mealId, r.attending])
+  const responseMap = new Map<string, number>(
+    family.responses.map((r) => [r.mealId, r.attending as unknown as number])
   );
-  const totalAttending = family.responses.filter((r) => r.attending).length;
+  const totalAttending = family.responses.reduce((s, r) => s + (r.attending as unknown as number), 0);
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -111,7 +111,7 @@ export default async function AdminFamilyPage({ params, searchParams }: PageProp
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">Meal Selections</CardTitle>
               <span className="text-sm text-gray-500">
-                {totalAttending} / {meals.length} meals selected
+                {totalAttending} total attendees across all meals
               </span>
             </div>
           </CardHeader>
@@ -134,25 +134,33 @@ export default async function AdminFamilyPage({ params, searchParams }: PageProp
                   );
                   return (
                     <TableRow key={day}>
-                      <TableCell className="font-medium">Day {day}</TableCell>
+                      <TableCell className="font-medium">
+                        {day === 10 ? "Day 10 (Ashura)" : `Day ${day}`}
+                      </TableCell>
                       <TableCell>
                         {lunchMeal ? (
-                          responseMap.get(lunchMeal.id) ? (
-                            <span className="text-green-600 font-medium">✓ Yes</span>
-                          ) : (
-                            <span className="text-gray-400">No</span>
-                          )
+                          (() => {
+                            const count = responseMap.get(lunchMeal.id) ?? 0;
+                            return count > 0 ? (
+                              <span className="text-green-600 font-medium">{count}</span>
+                            ) : (
+                              <span className="text-gray-400">0</span>
+                            );
+                          })()
                         ) : (
                           "—"
                         )}
                       </TableCell>
                       <TableCell>
                         {dinnerMeal ? (
-                          responseMap.get(dinnerMeal.id) ? (
-                            <span className="text-green-600 font-medium">✓ Yes</span>
-                          ) : (
-                            <span className="text-gray-400">No</span>
-                          )
+                          (() => {
+                            const count = responseMap.get(dinnerMeal.id) ?? 0;
+                            return count > 0 ? (
+                              <span className="text-green-600 font-medium">{count}</span>
+                            ) : (
+                              <span className="text-gray-400">0</span>
+                            );
+                          })()
                         ) : (
                           "—"
                         )}

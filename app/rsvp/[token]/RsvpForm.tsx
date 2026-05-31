@@ -3,7 +3,6 @@
 import { useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
   Accordion,
@@ -27,8 +26,9 @@ export default function RsvpForm({
   meals,
   initialResponses,
 }: RsvpFormProps) {
-  const [responses, setResponses] = useState<Map<string, boolean>>(() => {
-    const map = new Map<string, boolean>();
+  // attending is now a count (0 = not attending)
+  const [responses, setResponses] = useState<Map<string, number>>(() => {
+    const map = new Map<string, number>();
     for (const r of initialResponses) {
       map.set(r.mealId, r.attending);
     }
@@ -43,7 +43,7 @@ export default function RsvpForm({
   const token = family.editToken;
 
   const debouncedSave = useCallback(
-    (mealId: string, attending: boolean) => {
+    (mealId: string, count: number) => {
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
       }
@@ -53,7 +53,7 @@ export default function RsvpForm({
           const res = await fetch(`/api/rsvp/${token}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mealId, attending }),
+            body: JSON.stringify({ mealId, count }),
           });
           if (res.ok) {
             setSaveStatus("saved");
@@ -69,9 +69,9 @@ export default function RsvpForm({
     [token]
   );
 
-  function handleCheck(mealId: string, checked: boolean) {
-    setResponses((prev) => new Map(prev).set(mealId, checked));
-    debouncedSave(mealId, checked);
+  function handleCountChange(mealId: string, count: number) {
+    setResponses((prev) => new Map(prev).set(mealId, count));
+    debouncedSave(mealId, count);
   }
 
   async function handleSubmit() {
@@ -92,13 +92,18 @@ export default function RsvpForm({
   const mealsByDay = (day: number, mealType: string) =>
     meals.find((m) => m.day === day && m.mealType === mealType);
 
-  function getDayAttendingCount(day: number): number {
-    let count = 0;
+  function getDayAttendingTotal(day: number): number {
+    let total = 0;
     for (const mealType of ["lunch", "dinner"]) {
       const meal = mealsByDay(day, mealType);
-      if (meal && responses.get(meal.id) === true) count++;
+      if (meal) total += responses.get(meal.id) ?? 0;
     }
-    return count;
+    return total;
+  }
+
+  function getDayLabel(day: number): string {
+    if (day === 10) return "Day 10 — Ashura";
+    return `Day ${day}`;
   }
 
   return (
@@ -181,16 +186,16 @@ export default function RsvpForm({
 
         {/* Instructions */}
         <p className="text-sm text-gray-600 bg-blue-50 border border-blue-100 rounded-lg p-3">
-          Select the meals your family will attend. Changes are saved
-          automatically.
+          For each meal, enter how many family members will attend (0–
+          {family.memberCount}). Changes are saved automatically.
         </p>
 
         {/* Days Accordion */}
         <Accordion type="multiple" className="space-y-2">
           {days.map((day) => {
-            const lunch = mealsByDay(day, "lunch");
+            const lunch = day === 10 ? undefined : mealsByDay(day, "lunch");
             const dinner = mealsByDay(day, "dinner");
-            const count = getDayAttendingCount(day);
+            const total = getDayAttendingTotal(day);
 
             return (
               <AccordionItem
@@ -201,11 +206,16 @@ export default function RsvpForm({
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-3">
                     <span className="font-semibold text-gray-900">
-                      Day {day}
+                      {getDayLabel(day)}
                     </span>
-                    {count > 0 && (
+                    {day === 10 && (
+                      <Badge variant="outline" className="text-xs text-amber-700 border-amber-300">
+                        Fasting day — Dinner only
+                      </Badge>
+                    )}
+                    {total > 0 && (
                       <Badge variant="secondary" className="text-xs">
-                        {count} meal{count !== 1 ? "s" : ""} selected
+                        {total} attending
                       </Badge>
                     )}
                   </div>
@@ -213,19 +223,21 @@ export default function RsvpForm({
                 <AccordionContent>
                   <div className="space-y-4 pt-2 pb-1">
                     {lunch && (
-                      <MealRow
+                      <MealCountRow
                         meal={lunch}
                         label="Lunch"
-                        attending={responses.get(lunch.id) ?? false}
-                        onCheck={handleCheck}
+                        count={responses.get(lunch.id) ?? 0}
+                        max={family.memberCount}
+                        onChange={handleCountChange}
                       />
                     )}
                     {dinner && (
-                      <MealRow
+                      <MealCountRow
                         meal={dinner}
                         label="Dinner"
-                        attending={responses.get(dinner.id) ?? false}
-                        onCheck={handleCheck}
+                        count={responses.get(dinner.id) ?? 0}
+                        max={family.memberCount}
+                        onChange={handleCountChange}
                       />
                     )}
                   </div>
@@ -261,28 +273,44 @@ export default function RsvpForm({
   );
 }
 
-interface MealRowProps {
+interface MealCountRowProps {
   meal: Meal;
   label: string;
-  attending: boolean;
-  onCheck: (mealId: string, checked: boolean) => void;
+  count: number;
+  max: number;
+  onChange: (mealId: string, count: number) => void;
 }
 
-function MealRow({ meal, label, attending, onCheck }: MealRowProps) {
+function MealCountRow({ meal, label, count, max, onChange }: MealCountRowProps) {
   return (
     <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-      <label
-        htmlFor={`meal-${meal.id}`}
-        className="text-sm font-medium text-gray-800 cursor-pointer select-none"
-      >
-        {label}
-      </label>
-      <Checkbox
-        id={`meal-${meal.id}`}
-        checked={attending}
-        onCheckedChange={(checked) => onCheck(meal.id, checked === true)}
-        className="h-6 w-6"
-      />
+      <div>
+        <span className="text-sm font-medium text-gray-800">{label}</span>
+        <span className="text-xs text-gray-400 ml-2">max {max}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => onChange(meal.id, Math.max(0, count - 1))}
+          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-40"
+          disabled={count === 0}
+          aria-label="Decrease"
+        >
+          −
+        </button>
+        <span className="w-8 text-center text-sm font-semibold tabular-nums">
+          {count}
+        </span>
+        <button
+          type="button"
+          onClick={() => onChange(meal.id, Math.min(max, count + 1))}
+          className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 disabled:opacity-40"
+          disabled={count === max}
+          aria-label="Increase"
+        >
+          +
+        </button>
+      </div>
     </div>
   );
 }

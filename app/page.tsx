@@ -13,6 +13,27 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+const COUNTRY_CODES = [
+  { label: "+1 (Canada/USA)", value: "+1" },
+  { label: "+44 (UK)", value: "+44" },
+  { label: "+91 (India)", value: "+91" },
+  { label: "+92 (Pakistan)", value: "+92" },
+  { label: "+971 (UAE)", value: "+971" },
+  { label: "+974 (Qatar)", value: "+974" },
+  { label: "+966 (Saudi Arabia)", value: "+966" },
+  { label: "+965 (Kuwait)", value: "+965" },
+  { label: "+968 (Oman)", value: "+968" },
+  { label: "+973 (Bahrain)", value: "+973" },
+  { label: "+60 (Malaysia)", value: "+60" },
+  { label: "+61 (Australia)", value: "+61" },
+  { label: "+64 (New Zealand)", value: "+64" },
+  { label: "+27 (South Africa)", value: "+27" },
+  { label: "+255 (Tanzania)", value: "+255" },
+  { label: "+254 (Kenya)", value: "+254" },
+  { label: "+49 (Germany)", value: "+49" },
+  { label: "+33 (France)", value: "+33" },
+];
+
 export default function HomePage() {
   const router = useRouter();
   const [itsId, setItsId] = useState("");
@@ -20,7 +41,8 @@ export default function HomePage() {
   const [lastName, setLastName] = useState("");
   const [memberCount, setMemberCount] = useState("1");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [countryCode, setCountryCode] = useState("+1");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -28,6 +50,10 @@ export default function HomePage() {
     e.preventDefault();
     setError("");
     setLoading(true);
+
+    const phone = phoneNumber.trim()
+      ? `${countryCode}${phoneNumber.trim()}`
+      : undefined;
 
     try {
       const res = await fetch("/api/auth/lookup", {
@@ -38,8 +64,8 @@ export default function HomePage() {
           headName: headName.trim(),
           lastName: lastName.trim(),
           memberCount: parseInt(memberCount, 10) || 1,
-          email: email.trim() || undefined,
-          phone: phone.trim() || undefined,
+          email: email.trim(),
+          phone,
         }),
       });
 
@@ -136,27 +162,44 @@ export default function HomePage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address <span className="text-gray-400 font-normal">(optional)</span></Label>
+                <Label htmlFor="email">Email Address</Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="e.g. ahmed@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  required
                   className="h-12 text-base"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number <span className="text-gray-400 font-normal">(optional)</span></Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="e.g. 555-0101"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="h-12 text-base"
-                />
+                <Label htmlFor="phoneNumber">
+                  Phone Number{" "}
+                  <span className="text-gray-400 font-normal">(optional)</span>
+                </Label>
+                <div className="flex gap-2">
+                  <select
+                    value={countryCode}
+                    onChange={(e) => setCountryCode(e.target.value)}
+                    className="h-12 rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    {COUNTRY_CODES.map((c) => (
+                      <option key={c.value} value={c.value}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                  <Input
+                    id="phoneNumber"
+                    type="tel"
+                    placeholder="e.g. 5550101"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    className="h-12 text-base flex-1"
+                  />
+                </div>
               </div>
 
               {error && (

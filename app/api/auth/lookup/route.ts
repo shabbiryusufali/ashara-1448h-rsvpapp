@@ -6,9 +6,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { itsId, headName, lastName, memberCount, email, phone } = body;
 
-    if (!itsId || !headName || !lastName) {
+    if (!itsId || !headName || !lastName || !email) {
       return NextResponse.json(
-        { error: "ITS ID, head of family name, and last name are required." },
+        { error: "ITS ID, head of family name, last name, and email are required." },
         { status: 400 }
       );
     }
