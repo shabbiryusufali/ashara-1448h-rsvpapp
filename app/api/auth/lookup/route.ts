@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     // Pre-create MealResponse rows for instant RSVP form load
     for (const meal of meals) {
       await prisma.mealResponse.create({
-        data: { familyId: family.id, mealId: meal.id, attending: false },
+        data: { familyId: family.id, mealId: meal.id, attending: 0 },
       });
     }
 
