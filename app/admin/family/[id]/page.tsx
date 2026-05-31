@@ -35,12 +35,8 @@ export default async function AdminFamilyPage({ params, searchParams }: PageProp
   const family = await prisma.family.findUnique({
     where: { id },
     include: {
-      members: {
-        include: {
-          responses: {
-            include: { meal: true },
-          },
-        },
+      responses: {
+        include: { meal: true },
       },
       rsvp: true,
     },
@@ -55,6 +51,10 @@ export default async function AdminFamilyPage({ params, searchParams }: PageProp
   });
 
   const days = Array.from({ length: 10 }, (_, i) => i + 1);
+  const responseMap = new Map(
+    family.responses.map((r) => [r.mealId, r.attending])
+  );
+  const totalAttending = family.responses.filter((r) => r.attending).length;
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -73,6 +73,9 @@ export default async function AdminFamilyPage({ params, searchParams }: PageProp
               {family.headName} {family.lastName}
             </h1>
             <p className="text-gray-500 text-sm mt-1">ITS ID: {family.itsId}</p>
+            <p className="text-gray-500 text-sm">
+              {family.memberCount} {family.memberCount === 1 ? "member" : "members"}
+            </p>
             {family.email && (
               <p className="text-gray-500 text-sm">{family.email}</p>
             )}
@@ -95,7 +98,6 @@ export default async function AdminFamilyPage({ params, searchParams }: PageProp
           </div>
         </div>
 
-        {/* Edit RSVP link */}
         <div className="flex gap-3">
           <Link href={`/rsvp/${family.editToken}`} target="_blank">
             <Button variant="outline" size="sm">
@@ -104,90 +106,64 @@ export default async function AdminFamilyPage({ params, searchParams }: PageProp
           </Link>
         </div>
 
-        {/* Member meal matrix */}
-        {family.members.map((member) => {
-          const responseMap = new Map(
-            member.responses.map((r) => [r.mealId, r.attending])
-          );
-
-          const totalAttending = member.responses.filter(
-            (r) => r.attending
-          ).length;
-
-          return (
-            <Card key={member.id}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-3">
-                  <CardTitle className="text-base">{member.name}</CardTitle>
-                  <Badge
-                    variant={
-                      member.ageGroup === "adult" ? "default" : "secondary"
-                    }
-                  >
-                    {member.ageGroup}
-                  </Badge>
-                  <span className="text-sm text-gray-500 ml-auto">
-                    {totalAttending} / {meals.length} meals
-                  </span>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Day</TableHead>
-                      <TableHead>Breakfast</TableHead>
-                      <TableHead>Dinner</TableHead>
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Meal Selections</CardTitle>
+              <span className="text-sm text-gray-500">
+                {totalAttending} / {meals.length} meals selected
+              </span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Day</TableHead>
+                  <TableHead>Lunch</TableHead>
+                  <TableHead>Dinner</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {days.map((day) => {
+                  const lunchMeal = meals.find(
+                    (m) => m.day === day && m.mealType === "lunch"
+                  );
+                  const dinnerMeal = meals.find(
+                    (m) => m.day === day && m.mealType === "dinner"
+                  );
+                  return (
+                    <TableRow key={day}>
+                      <TableCell className="font-medium">Day {day}</TableCell>
+                      <TableCell>
+                        {lunchMeal ? (
+                          responseMap.get(lunchMeal.id) ? (
+                            <span className="text-green-600 font-medium">✓ Yes</span>
+                          ) : (
+                            <span className="text-gray-400">No</span>
+                          )
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {dinnerMeal ? (
+                          responseMap.get(dinnerMeal.id) ? (
+                            <span className="text-green-600 font-medium">✓ Yes</span>
+                          ) : (
+                            <span className="text-gray-400">No</span>
+                          )
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {days.map((day) => {
-                      const bfMeal = meals.find(
-                        (m) => m.day === day && m.mealType === "breakfast"
-                      );
-                      const dnMeal = meals.find(
-                        (m) => m.day === day && m.mealType === "dinner"
-                      );
-                      return (
-                        <TableRow key={day}>
-                          <TableCell className="font-medium">
-                            Day {day}
-                          </TableCell>
-                          <TableCell>
-                            {bfMeal ? (
-                              responseMap.get(bfMeal.id) ? (
-                                <span className="text-green-600 font-medium">
-                                  ✓ Yes
-                                </span>
-                              ) : (
-                                <span className="text-gray-400">No</span>
-                              )
-                            ) : (
-                              "—"
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {dnMeal ? (
-                              responseMap.get(dnMeal.id) ? (
-                                <span className="text-green-600 font-medium">
-                                  ✓ Yes
-                                </span>
-                              ) : (
-                                <span className="text-gray-400">No</span>
-                              )
-                            ) : (
-                              "—"
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          );
-        })}
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
     </main>
   );

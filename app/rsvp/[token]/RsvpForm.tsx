@@ -12,10 +12,10 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { FamilyWithMembers, Meal, MealResponse } from "@/types";
+import type { Family, Meal, MealResponse } from "@/types";
 
 interface RsvpFormProps {
-  family: FamilyWithMembers;
+  family: Family;
   meals: Meal[];
   initialResponses: MealResponse[];
 }
@@ -30,7 +30,7 @@ export default function RsvpForm({
   const [responses, setResponses] = useState<Map<string, boolean>>(() => {
     const map = new Map<string, boolean>();
     for (const r of initialResponses) {
-      map.set(`${r.memberId}:${r.mealId}`, r.attending);
+      map.set(r.mealId, r.attending);
     }
     return map;
   });
@@ -43,7 +43,7 @@ export default function RsvpForm({
   const token = family.editToken;
 
   const debouncedSave = useCallback(
-    (memberId: string, mealId: string, attending: boolean) => {
+    (mealId: string, attending: boolean) => {
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
       }
@@ -53,7 +53,7 @@ export default function RsvpForm({
           const res = await fetch(`/api/rsvp/${token}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ memberId, mealId, attending }),
+            body: JSON.stringify({ mealId, attending }),
           });
           if (res.ok) {
             setSaveStatus("saved");
@@ -69,19 +69,9 @@ export default function RsvpForm({
     [token]
   );
 
-  function handleCheck(memberId: string, mealId: string, checked: boolean) {
-    const key = `${memberId}:${mealId}`;
-    setResponses((prev) => new Map(prev).set(key, checked));
-    debouncedSave(memberId, mealId, checked);
-  }
-
-  function handleToggleAll(mealId: string, checked: boolean) {
-    const newMap = new Map(responses);
-    for (const member of family.members) {
-      newMap.set(`${member.id}:${mealId}`, checked);
-      debouncedSave(member.id, mealId, checked);
-    }
-    setResponses(newMap);
+  function handleCheck(mealId: string, checked: boolean) {
+    setResponses((prev) => new Map(prev).set(mealId, checked));
+    debouncedSave(mealId, checked);
   }
 
   async function handleSubmit() {
@@ -98,21 +88,17 @@ export default function RsvpForm({
     }
   }
 
-  // Group meals by day
   const days = Array.from({ length: 10 }, (_, i) => i + 1);
   const mealsByDay = (day: number, mealType: string) =>
     meals.find((m) => m.day === day && m.mealType === mealType);
 
-  function getMealAttendingCount(mealId: string): number {
-    return family.members.filter(
-      (m) => responses.get(`${m.id}:${mealId}`) === true
-    ).length;
-  }
-
-  function areAllAttending(mealId: string): boolean {
-    return family.members.every(
-      (m) => responses.get(`${m.id}:${mealId}`) === true
-    );
+  function getDayAttendingCount(day: number): number {
+    let count = 0;
+    for (const mealType of ["lunch", "dinner"]) {
+      const meal = mealsByDay(day, mealType);
+      if (meal && responses.get(meal.id) === true) count++;
+    }
+    return count;
   }
 
   return (
@@ -124,7 +110,10 @@ export default function RsvpForm({
             <h1 className="text-lg font-bold text-gray-900">
               {family.headName} {family.lastName} Family
             </h1>
-            <p className="text-sm text-gray-500">ITS: {family.itsId}</p>
+            <p className="text-sm text-gray-500">
+              ITS: {family.itsId} &middot; {family.memberCount}{" "}
+              {family.memberCount === 1 ? "member" : "members"}
+            </p>
           </div>
           <div className="text-right">
             {saveStatus === "saving" && (
@@ -155,58 +144,53 @@ export default function RsvpForm({
             <p className="text-green-700 text-sm mt-1">
               You can continue editing your selections. Changes are saved
               automatically.{" "}
-              <Link
-                href={`/rsvp/${token}`}
-                className="underline font-medium"
-              >
+              <Link href={`/rsvp/${token}`} className="underline font-medium">
                 Edit RSVP
               </Link>
             </p>
           </div>
         )}
 
-        {/* Family Members */}
+        {/* Family Info */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Family Members</CardTitle>
+            <CardTitle className="text-base">Your Registration</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {family.members.map((member) => (
-                <div
-                  key={member.id}
-                  className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-full px-3 py-1.5"
-                >
-                  <span className="text-sm font-medium">{member.name}</span>
-                  <Badge
-                    variant={member.ageGroup === "adult" ? "default" : "secondary"}
-                    className="text-xs py-0"
-                  >
-                    {member.ageGroup}
-                  </Badge>
-                </div>
-              ))}
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <span className="text-gray-500">Family size</span>
+              <span className="font-medium">
+                {family.memberCount}{" "}
+                {family.memberCount === 1 ? "member" : "members"}
+              </span>
+              {family.email && (
+                <>
+                  <span className="text-gray-500">Email</span>
+                  <span className="font-medium">{family.email}</span>
+                </>
+              )}
+              {family.phone && (
+                <>
+                  <span className="text-gray-500">Phone</span>
+                  <span className="font-medium">{family.phone}</span>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
 
         {/* Instructions */}
         <p className="text-sm text-gray-600 bg-blue-50 border border-blue-100 rounded-lg p-3">
-          Select the meals each family member will attend. Changes are saved
+          Select the meals your family will attend. Changes are saved
           automatically.
         </p>
 
         {/* Days Accordion */}
         <Accordion type="multiple" className="space-y-2">
           {days.map((day) => {
-            const breakfast = mealsByDay(day, "breakfast");
+            const lunch = mealsByDay(day, "lunch");
             const dinner = mealsByDay(day, "dinner");
-
-            const breakfastCount = breakfast
-              ? getMealAttendingCount(breakfast.id)
-              : 0;
-            const dinnerCount = dinner ? getMealAttendingCount(dinner.id) : 0;
-            const totalCount = breakfastCount + dinnerCount;
+            const count = getDayAttendingCount(day);
 
             return (
               <AccordionItem
@@ -219,35 +203,29 @@ export default function RsvpForm({
                     <span className="font-semibold text-gray-900">
                       Day {day}
                     </span>
-                    {totalCount > 0 && (
+                    {count > 0 && (
                       <Badge variant="secondary" className="text-xs">
-                        {totalCount} attending
+                        {count} meal{count !== 1 ? "s" : ""} selected
                       </Badge>
                     )}
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="space-y-5 pt-2">
-                    {breakfast && (
-                      <MealSection
-                        meal={breakfast}
-                        label="Breakfast"
-                        members={family.members}
-                        responses={responses}
+                  <div className="space-y-4 pt-2 pb-1">
+                    {lunch && (
+                      <MealRow
+                        meal={lunch}
+                        label="Lunch"
+                        attending={responses.get(lunch.id) ?? false}
                         onCheck={handleCheck}
-                        onToggleAll={handleToggleAll}
-                        allAttending={areAllAttending(breakfast.id)}
                       />
                     )}
                     {dinner && (
-                      <MealSection
+                      <MealRow
                         meal={dinner}
                         label="Dinner"
-                        members={family.members}
-                        responses={responses}
+                        attending={responses.get(dinner.id) ?? false}
                         onCheck={handleCheck}
-                        onToggleAll={handleToggleAll}
-                        allAttending={areAllAttending(dinner.id)}
                       />
                     )}
                   </div>
@@ -283,77 +261,28 @@ export default function RsvpForm({
   );
 }
 
-interface MealSectionProps {
+interface MealRowProps {
   meal: Meal;
   label: string;
-  members: FamilyWithMembers["members"];
-  responses: Map<string, boolean>;
-  onCheck: (memberId: string, mealId: string, checked: boolean) => void;
-  onToggleAll: (mealId: string, checked: boolean) => void;
-  allAttending: boolean;
+  attending: boolean;
+  onCheck: (mealId: string, checked: boolean) => void;
 }
 
-function MealSection({
-  meal,
-  label,
-  members,
-  responses,
-  onCheck,
-  onToggleAll,
-  allAttending,
-}: MealSectionProps) {
+function MealRow({ meal, label, attending, onCheck }: MealRowProps) {
   return (
-    <div>
-      <div className="flex items-center gap-3 mb-3 pb-2 border-b border-gray-100">
-        <span className="font-medium text-sm text-gray-700 uppercase tracking-wide">
-          {label}
-        </span>
-        <div className="flex items-center gap-2 ml-auto">
-          <label
-            htmlFor={`toggle-all-${meal.id}`}
-            className="text-sm text-gray-500 cursor-pointer select-none"
-          >
-            All
-          </label>
-          <Checkbox
-            id={`toggle-all-${meal.id}`}
-            checked={allAttending}
-            onCheckedChange={(checked) =>
-              onToggleAll(meal.id, checked === true)
-            }
-          />
-        </div>
-      </div>
-      <div className="space-y-3">
-        {members.map((member) => {
-          const key = `${member.id}:${meal.id}`;
-          const attending = responses.get(key) ?? false;
-          return (
-            <div
-              key={member.id}
-              className="flex items-center justify-between py-1"
-            >
-              <label
-                htmlFor={`${member.id}-${meal.id}`}
-                className="text-sm font-medium text-gray-800 cursor-pointer select-none flex-1 pr-4"
-              >
-                {member.name}
-                <span className="ml-2 text-xs text-gray-400">
-                  ({member.ageGroup})
-                </span>
-              </label>
-              <Checkbox
-                id={`${member.id}-${meal.id}`}
-                checked={attending}
-                onCheckedChange={(checked) =>
-                  onCheck(member.id, meal.id, checked === true)
-                }
-                className="h-6 w-6"
-              />
-            </div>
-          );
-        })}
-      </div>
+    <div className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+      <label
+        htmlFor={`meal-${meal.id}`}
+        className="text-sm font-medium text-gray-800 cursor-pointer select-none"
+      >
+        {label}
+      </label>
+      <Checkbox
+        id={`meal-${meal.id}`}
+        checked={attending}
+        onCheckedChange={(checked) => onCheck(meal.id, checked === true)}
+        className="h-6 w-6"
+      />
     </div>
   );
 }

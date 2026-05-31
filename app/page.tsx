@@ -18,6 +18,9 @@ export default function HomePage() {
   const [itsId, setItsId] = useState("");
   const [headName, setHeadName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [memberCount, setMemberCount] = useState("1");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -34,6 +37,9 @@ export default function HomePage() {
           itsId: itsId.trim(),
           headName: headName.trim(),
           lastName: lastName.trim(),
+          memberCount: parseInt(memberCount, 10) || 1,
+          email: email.trim() || undefined,
+          phone: phone.trim() || undefined,
         }),
       });
 
@@ -110,6 +116,45 @@ export default function HomePage() {
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   required
+                  className="h-12 text-base"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="memberCount">Number of Family Members</Label>
+                <Input
+                  id="memberCount"
+                  type="number"
+                  inputMode="numeric"
+                  min="1"
+                  placeholder="e.g. 4"
+                  value={memberCount}
+                  onChange={(e) => setMemberCount(e.target.value)}
+                  required
+                  className="h-12 text-base"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address <span className="text-gray-400 font-normal">(optional)</span></Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="e.g. ahmed@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12 text-base"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number <span className="text-gray-400 font-normal">(optional)</span></Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  placeholder="e.g. 555-0101"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
                   className="h-12 text-base"
                 />
               </div>

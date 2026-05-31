@@ -12,7 +12,7 @@ export default async function RsvpPage({ params }: PageProps) {
   const family = await prisma.family.findUnique({
     where: { editToken: token },
     include: {
-      members: true,
+      responses: true,
       rsvp: true,
     },
   });
@@ -25,12 +25,6 @@ export default async function RsvpPage({ params }: PageProps) {
     orderBy: [{ day: "asc" }, { mealType: "asc" }],
   });
 
-  const responses = await prisma.mealResponse.findMany({
-    where: {
-      member: { familyId: family.id },
-    },
-  });
-
   return (
     <RsvpForm
       family={{
@@ -40,9 +34,9 @@ export default async function RsvpPage({ params }: PageProps) {
         lastName: family.lastName,
         phone: family.phone,
         email: family.email,
+        memberCount: family.memberCount,
         editToken: family.editToken,
         createdAt: family.createdAt,
-        members: family.members,
         rsvp: family.rsvp
           ? {
               id: family.rsvp.id,
@@ -53,9 +47,9 @@ export default async function RsvpPage({ params }: PageProps) {
           : null,
       }}
       meals={meals}
-      initialResponses={responses.map((r) => ({
+      initialResponses={family.responses.map((r) => ({
         id: r.id,
-        memberId: r.memberId,
+        familyId: r.familyId,
         mealId: r.mealId,
         attending: r.attending,
       }))}

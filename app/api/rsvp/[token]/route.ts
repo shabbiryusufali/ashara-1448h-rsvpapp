@@ -11,11 +11,7 @@ export async function GET(
     const family = await prisma.family.findUnique({
       where: { editToken: token },
       include: {
-        members: {
-          include: {
-            responses: true,
-          },
-        },
+        responses: true,
         rsvp: true,
       },
     });
@@ -28,15 +24,6 @@ export async function GET(
       orderBy: [{ day: "asc" }, { mealType: "asc" }],
     });
 
-    const responses = family.members.flatMap((m) =>
-      m.responses.map((r) => ({
-        id: r.id,
-        memberId: r.memberId,
-        mealId: r.mealId,
-        attending: r.attending,
-      }))
-    );
-
     return NextResponse.json({
       family: {
         id: family.id,
@@ -45,17 +32,17 @@ export async function GET(
         lastName: family.lastName,
         phone: family.phone,
         email: family.email,
+        memberCount: family.memberCount,
         editToken: family.editToken,
         createdAt: family.createdAt,
       },
-      members: family.members.map((m) => ({
-        id: m.id,
-        familyId: m.familyId,
-        name: m.name,
-        ageGroup: m.ageGroup,
-      })),
       meals,
-      responses,
+      responses: family.responses.map((r) => ({
+        id: r.id,
+        familyId: r.familyId,
+        mealId: r.mealId,
+        attending: r.attending,
+      })),
       rsvp: family.rsvp,
     });
   } catch (error) {
@@ -71,9 +58,9 @@ export async function PATCH(
   try {
     const { token } = await params;
     const body = await request.json();
-    const { memberId, mealId, attending } = body;
+    const { mealId, attending } = body;
 
-    if (!memberId || !mealId || attending === undefined) {
+    if (!mealId || attending === undefined) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
@@ -85,25 +72,17 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid token" }, { status: 404 });
     }
 
-    // Verify the member belongs to this family
-    const member = await prisma.member.findFirst({
-      where: { id: memberId, familyId: family.id },
-    });
-
-    if (!member) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-
     const updated = await prisma.mealResponse.upsert({
-      where: { memberId_mealId: { memberId, mealId } },
+      where: { familyId_mealId: { familyId: family.id, mealId } },
       update: { attending },
-      create: { memberId, mealId, attending },
+      create: { familyId: family.id, mealId, attending },
     });
 
-    // Touch RSVP updatedAt
-    await prisma.rsvp.update({
+    // Touch RSVP updatedAt (upsert so it works even if not yet submitted)
+    await prisma.rsvp.upsert({
       where: { familyId: family.id },
-      data: { updatedAt: new Date() },
+      update: { updatedAt: new Date() },
+      create: { familyId: family.id },
     });
 
     return NextResponse.json({ response: updated });

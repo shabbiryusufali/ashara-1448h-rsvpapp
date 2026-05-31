@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { itsId, headName, lastName } = body;
+    const { itsId, headName, lastName, memberCount, email, phone } = body;
 
     if (!itsId || !headName || !lastName) {
       return NextResponse.json(
@@ -16,25 +16,22 @@ export async function POST(request: NextRequest) {
     const itsIdStr = String(itsId).trim();
     const headNameStr = String(headName).trim();
     const lastNameStr = String(lastName).trim();
+    const count = typeof memberCount === "number" && memberCount > 0 ? memberCount : 1;
 
     const existing = await prisma.family.findUnique({
       where: { itsId: itsIdStr },
-      include: { members: true },
     });
 
     if (existing) {
-      // Returning family — verify last name as light auth
       if (existing.lastName.toLowerCase() !== lastNameStr.toLowerCase()) {
         return NextResponse.json(
           { error: "Last name does not match our records." },
           { status: 401 }
         );
       }
-
       return NextResponse.json({ editToken: existing.editToken });
     }
 
-    // New registration — create family with head of family as sole member
     const meals = await prisma.meal.findMany();
 
     const family = await prisma.family.create({
@@ -42,20 +39,17 @@ export async function POST(request: NextRequest) {
         itsId: itsIdStr,
         headName: headNameStr,
         lastName: lastNameStr,
-        members: {
-          create: [{ name: `${headNameStr} ${lastNameStr}`, ageGroup: "adult" }],
-        },
+        memberCount: count,
+        email: email ? String(email).trim() : null,
+        phone: phone ? String(phone).trim() : null,
       },
-      include: { members: true },
     });
 
     // Pre-create MealResponse rows for instant RSVP form load
-    for (const member of family.members) {
-      for (const meal of meals) {
-        await prisma.mealResponse.create({
-          data: { memberId: member.id, mealId: meal.id, attending: false },
-        });
-      }
+    for (const meal of meals) {
+      await prisma.mealResponse.create({
+        data: { familyId: family.id, mealId: meal.id, attending: false },
+      });
     }
 
     return NextResponse.json({ editToken: family.editToken });

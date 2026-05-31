@@ -16,9 +16,10 @@ export async function POST(
       return NextResponse.json({ error: "Invalid token" }, { status: 404 });
     }
 
-    const rsvp = await prisma.rsvp.update({
+    const rsvp = await prisma.rsvp.upsert({
       where: { familyId: family.id },
-      data: { updatedAt: new Date() },
+      update: { updatedAt: new Date() },
+      create: { familyId: family.id },
     });
 
     return NextResponse.json({ rsvp, success: true });
