@@ -4,72 +4,61 @@ import { prisma } from "@/lib/prisma";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { itsId, lastName } = body;
+    const { itsId, headName, lastName } = body;
 
-    if (!itsId || !lastName) {
+    if (!itsId || !headName || !lastName) {
       return NextResponse.json(
-        { error: "ITS ID and Last Name are required" },
+        { error: "ITS ID, head of family name, and last name are required." },
         { status: 400 }
       );
     }
 
-    const family = await prisma.family.findUnique({
-      where: { itsId: String(itsId) },
-      include: { members: true, rsvp: true },
+    const itsIdStr = String(itsId).trim();
+    const headNameStr = String(headName).trim();
+    const lastNameStr = String(lastName).trim();
+
+    const existing = await prisma.family.findUnique({
+      where: { itsId: itsIdStr },
+      include: { members: true },
     });
 
-    if (!family) {
-      return NextResponse.json(
-        { error: "Family not found. Please contact the event organizer." },
-        { status: 404 }
-      );
+    if (existing) {
+      // Returning family — verify last name as light auth
+      if (existing.lastName.toLowerCase() !== lastNameStr.toLowerCase()) {
+        return NextResponse.json(
+          { error: "Last name does not match our records." },
+          { status: 401 }
+        );
+      }
+
+      return NextResponse.json({ editToken: existing.editToken });
     }
 
-    if (family.lastName.toLowerCase() !== lastName.trim().toLowerCase()) {
-      return NextResponse.json(
-        { error: "Last name does not match our records." },
-        { status: 401 }
-      );
-    }
-
-    // Create RSVP if not exists
-    if (!family.rsvp) {
-      await prisma.rsvp.create({
-        data: { familyId: family.id },
-      });
-    }
-
-    // Ensure MealResponse rows exist for all members × all meals
+    // New registration — create family with head of family as sole member
     const meals = await prisma.meal.findMany();
+
+    const family = await prisma.family.create({
+      data: {
+        itsId: itsIdStr,
+        headName: headNameStr,
+        lastName: lastNameStr,
+        members: {
+          create: [{ name: `${headNameStr} ${lastNameStr}`, ageGroup: "adult" }],
+        },
+      },
+      include: { members: true },
+    });
+
+    // Pre-create MealResponse rows for instant RSVP form load
     for (const member of family.members) {
       for (const meal of meals) {
-        await prisma.mealResponse.upsert({
-          where: {
-            memberId_mealId: { memberId: member.id, mealId: meal.id },
-          },
-          update: {},
-          create: {
-            memberId: member.id,
-            mealId: meal.id,
-            attending: false,
-          },
+        await prisma.mealResponse.create({
+          data: { memberId: member.id, mealId: meal.id, attending: false },
         });
       }
     }
 
-    return NextResponse.json({
-      family: {
-        id: family.id,
-        itsId: family.itsId,
-        headName: family.headName,
-        lastName: family.lastName,
-        phone: family.phone,
-        email: family.email,
-        editToken: family.editToken,
-      },
-      members: family.members,
-      editToken: family.editToken,
-    });
+    return NextResponse.json({ editToken: family.editToken });
   } catch (error) {
     console.error("Lookup error:", error);
     return NextResponse.json(
